@@ -9,9 +9,12 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils.html import strip_tags
+from django.views.decorators.csrf import csrf_exempt
+import json
+from django.http import JsonResponse
+from django.contrib.auth import logout as auth_logout
 
 @login_required(login_url='/login')
 def show_main(request):
@@ -134,3 +137,38 @@ def add_mood_entry_ajax(request):
 def add_mood_entry_ajax(request):
     mood = strip_tags(request.POST.get("mood")) # strip HTML tags!
     feelings = strip_tags(request.POST.get("feelings")) # strip HTML tags!
+
+@csrf_exempt
+def create_mood_flutter(request):
+    if request.method == 'POST':
+
+        data = json.loads(request.body)
+        new_mood = MoodEntry.objects.create(
+            user=request.user,
+            mood=data["mood"],
+            mood_intensity=int(data["mood_intensity"]),
+            feelings=data["feelings"]
+        )
+
+        new_mood.save()
+
+        return JsonResponse({"status": "success"}, status=200)
+    else:
+        return JsonResponse({"status": "error"}, status=401)
+    
+@csrf_exempt
+def logout(request):
+    username = request.user.username
+
+    try:
+        auth_logout(request)
+        return JsonResponse({
+            "username": username,
+            "status": True,
+            "message": "Logout berhasil!"
+        }, status=200)
+    except:
+        return JsonResponse({
+        "status": False,
+        "message": "Logout gagal."
+        }, status=401)
